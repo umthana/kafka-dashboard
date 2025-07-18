@@ -5,96 +5,48 @@ const PhasorPlot = ({ gridData, microgridData }) => {
   const plotData = useMemo(() => {
     const traces = [];
 
-    // Helper function to convert magnitude and angle to cartesian coordinates
-    const polarToCartesian = (magnitude, angleDegrees) => {
-      const angleRadians = (angleDegrees * Math.PI) / 180;
-      return {
-        x: magnitude * Math.cos(angleRadians),
-        y: magnitude * Math.sin(angleRadians)
-      };
-    };
+    // Add a helper to format angle in degrees (Plotly polar uses degrees)
+    const formatPolarTrace = ({ name, mag, ang, color, dash = 'solid', symbol = 'circle' }) => ({
+      r: [0, mag],
+      theta: [0, ang],
+      mode: 'lines+markers',
+      type: 'scatterpolar',
+      name,
+      line: {
+        color,
+        width: 3,
+        dash
+      },
+      marker: {
+        size: 8,
+        color,
+        symbol
+      }
+    });
 
     // Grid PMU data
     if (gridData) {
       const gridPhases = [
-        { name: 'Grid Va', mag: gridData.va_mag, ang: gridData.va_ang, color: '#FF6B6B' },
-        { name: 'Grid Vb', mag: gridData.vb_mag, ang: gridData.vb_ang, color: '#4ECDC4' },
-        { name: 'Grid Vc', mag: gridData.vc_mag, ang: gridData.vc_ang, color: '#45B7D1' }
+        { name: 'Grid Va', mag: gridData.va_mag, ang: gridData.va_ang, color: '#FF0000' },  // Red
+        { name: 'Grid Vb', mag: gridData.vb_mag, ang: gridData.vb_ang, color: '#FFD700' },  // Yellow
+        { name: 'Grid Vc', mag: gridData.vc_mag, ang: gridData.vc_ang, color: '#0000FF' }   // Blue
       ];
-
       gridPhases.forEach(phase => {
-        const cart = polarToCartesian(phase.mag, phase.ang);
-        traces.push({
-          x: [0, cart.x],
-          y: [0, cart.y],
-          mode: 'lines+markers',
-          type: 'scatter',
-          name: phase.name,
-          line: {
-            color: phase.color,
-            width: 3
-          },
-          marker: {
-            size: 8,
-            color: phase.color
-          }
-        });
+        traces.push(formatPolarTrace(phase));
       });
     }
 
     // Microgrid PMU data
     if (microgridData) {
       const microgridPhases = [
-        { name: 'Microgrid Va', mag: microgridData.va_mag, ang: microgridData.va_ang, color: '#FF6B6B', dash: 'dash' },
-        { name: 'Microgrid Vb', mag: microgridData.vb_mag, ang: microgridData.vb_ang, color: '#4ECDC4', dash: 'dash' },
-        { name: 'Microgrid Vc', mag: microgridData.vc_mag, ang: microgridData.vc_ang, color: '#45B7D1', dash: 'dash' }
+        { name: 'Microgrid Va', mag: microgridData.va_mag, ang: microgridData.va_ang, color: '#FF0000', dash: 'dash', symbol: 'square' },
+        { name: 'Microgrid Vb', mag: microgridData.vb_mag, ang: microgridData.vb_ang, color: '#FFD700', dash: 'dash', symbol: 'square' },
+        { name: 'Microgrid Vc', mag: microgridData.vc_mag, ang: microgridData.vc_ang, color: '#0000FF', dash: 'dash', symbol: 'square' }
       ];
-
       microgridPhases.forEach(phase => {
-        const cart = polarToCartesian(phase.mag, phase.ang);
-        traces.push({
-          x: [0, cart.x],
-          y: [0, cart.y],
-          mode: 'lines+markers',
-          type: 'scatter',
-          name: phase.name,
-          line: {
-            color: phase.color,
-            width: 3,
-            dash: phase.dash
-          },
-          marker: {
-            size: 8,
-            color: phase.color,
-            symbol: 'square'
-          }
-        });
+        traces.push(formatPolarTrace(phase));
       });
     }
-
-    // Add circle reference lines
-    const circleAngles = Array.from({length: 361}, (_, i) => i * Math.PI / 180);
-    const circles = [100, 150, 200, 250];
-    
-    circles.forEach(radius => {
-      const circleX = circleAngles.map(angle => radius * Math.cos(angle));
-      const circleY = circleAngles.map(angle => radius * Math.sin(angle));
-      
-      traces.push({
-        x: circleX,
-        y: circleY,
-        mode: 'lines',
-        type: 'scatter',
-        name: `${radius}V`,
-        line: {
-          color: '#E0E0E0',
-          width: 1,
-          dash: 'dot'
-        },
-        showlegend: false,
-        hoverinfo: 'skip'
-      });
-    });
 
     return traces;
   }, [gridData, microgridData]);
@@ -104,25 +56,19 @@ const PhasorPlot = ({ gridData, microgridData }) => {
       text: '3-Phase Voltage Phasor Diagram',
       font: { size: 18 }
     },
-    xaxis: {
-      title: 'Real Part (V)',
-      range: [-300, 300],
-      zeroline: true,
-      zerolinecolor: '#000',
-      zerolinewidth: 2,
-      gridcolor: '#F0F0F0',
-      scaleanchor: 'y',
-      scaleratio: 1
+    polar: {
+      radialaxis: {
+        // title: 'Magnitude (V)',
+        range: [0, 300],
+        gridcolor: '#F0F0F0'
+      },
+      angularaxis: {
+        direction: 'counterclockwise',
+        rotation: 0,
+        gridcolor: '#F0F0F0'
+      },
+      bgcolor: 'white'
     },
-    yaxis: {
-      title: 'Imaginary Part (V)',
-      range: [-300, 300],
-      zeroline: true,
-      zerolinecolor: '#000',
-      zerolinewidth: 2,
-      gridcolor: '#F0F0F0'
-    },
-    plot_bgcolor: 'white',
     paper_bgcolor: 'white',
     showlegend: true,
     legend: {
@@ -132,8 +78,7 @@ const PhasorPlot = ({ gridData, microgridData }) => {
       bordercolor: '#E0E0E0',
       borderwidth: 1
     },
-    margin: { l: 60, r: 150, t: 60, b: 60 },
-    hovermode: 'closest'
+    margin: { l: 60, r: 150, t: 60, b: 60 }
   };
 
   const config = {
@@ -143,7 +88,7 @@ const PhasorPlot = ({ gridData, microgridData }) => {
     modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
     toImageButtonOptions: {
       format: 'png',
-      filename: 'phasor_plot',
+      filename: 'phasor_plot_polar',
       height: 600,
       width: 800,
       scale: 1

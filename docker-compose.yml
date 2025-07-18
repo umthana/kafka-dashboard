@@ -1,56 +1,16 @@
 version: '3.8'
 
 services:
-  # Redpanda (Kafka-compatible)
-  redpanda:
-    image: redpandadata/redpanda:latest
-    container_name: redpanda
-    command:
-      - redpanda
-      - start
-      - --smp=1
-      - --memory=1G
-      - --overprovisioned
-      - --node-id=0
-      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
-      - --advertise-kafka-addr=PLAINTEXT://localhost:9092
-      - --pandaproxy-addr=0.0.0.0:8082
-      - --advertise-pandaproxy-addr=localhost:8082
-      - --set=redpanda.enable_transactions=true
-      - --set=redpanda.enable_idempotence=true
-    ports:
-      - "9092:9092"
-      - "8082:8082"
-    volumes:
-      - redpanda_data:/var/lib/redpanda/data
-    networks:
-      - pmu-network
-
-  # Redpanda Console (Web UI)
-  redpanda-console:
-    image: redpandadata/console:latest
-    container_name: redpanda-console
-    environment:
-      - KAFKA_BROKERS=redpanda:9092
-    ports:
-      - "8080:8080"
-    depends_on:
-      - redpanda
-    networks:
-      - pmu-network
-
   # PMU Dashboard Backend
   pmu-backend:
     build: ./backend
     container_name: pmu-backend
     environment:
-      - KAFKA_BROKER=redpanda:9092
+      - KAFKA_BROKER=localhost:9092
       - PORT=3001
       - NODE_ENV=development
     ports:
       - "3001:3001"
-    depends_on:
-      - redpanda
     networks:
       - pmu-network
     volumes:
